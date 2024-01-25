@@ -1,0 +1,32 @@
+FROM python:3.9-slim as base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libc-dev \
+    libpq-dev \
+    python3-dev
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ./frontend /frontend
+
+WORKDIR .
+
+EXPOSE 5679
+
+###########START NEW IMAGE : DEBUGGER ###################
+FROM base as debug
+RUN pip install debugpy
+
+WORKDIR .
+
+CMD python -m debugpy --listen 0.0.0.0:5679 --wait-for-client -m frontend.app
+
+###########START NEW IMAGE: PRODUCTION ###################
+FROM base as prod
+
+CMD ["python", "-m", "frontend.app"]
